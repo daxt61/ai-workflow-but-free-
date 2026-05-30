@@ -1,9 +1,10 @@
 import { enrichOpenRouterModel } from '@shared/modelUtils'
 import type { ChatMessage, OpenRouterModel, ToolDefinition } from '@shared/types'
+import { LLMClient } from './LLMClient'
 
 const BASE_URL = 'https://openrouter.ai/api/v1'
 
-export class OpenRouterClient {
+export class OpenRouterClient implements LLMClient {
   private abortController: AbortController | null = null
 
   constructor(

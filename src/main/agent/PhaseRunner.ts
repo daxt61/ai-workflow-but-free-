@@ -10,6 +10,7 @@ import type { AgentPhase, ChatMessage, LogEntry } from '@shared/types'
 import type { OpenRouterClient } from '../services/OpenRouterClient'
 import type { CancellationToken } from './CancellationToken'
 import type { ToolExecutor } from './ToolExecutor'
+import { AIManager } from './AIManager'
 import { SideTaskRunner } from './SideTaskRunner'
 import { buildPhaseSystemPrompt, CONTINUE_THINKING } from './phasePrompts'
 import { randomUUID } from 'crypto'
@@ -31,7 +32,8 @@ export class PhaseRunner {
     openRouterClient: OpenRouterClient,
     toolExecutor: ToolExecutor,
     cancellationToken: CancellationToken,
-    onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
+    onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void,
+    aiManager?: AIManager
   ): Promise<ChatMessage[]> {
     const history = [...messageHistory]
     const phaseStart = Date.now()
@@ -80,10 +82,38 @@ export class PhaseRunner {
         ...history
       ]
 
-      const assistantMessage = await openRouterClient.chatCompletion(
-        messages,
-        toolsEnabled ? AGENT_TOOLS : undefined
-      )
+      let assistantMessage: ChatMessage
+
+      if (aiManager) {
+        if (aiManager.getWorkers().length > 1 && (phase === 'implementation' || phase === 'research')) {
+          const results = await aiManager.runParallel(messages, toolsEnabled ? AGENT_TOOLS : undefined, cancellationToken)
+          if (results.length > 0) {
+            // Simple merge strategy: use the first one as primary, but log all
+            assistantMessage = results[0]
+
+            // Log other worker results
+            results.slice(1).forEach((res, idx) => {
+              onLog({
+                type: 'reasoning',
+                phase,
+                content: `Worker ${idx + 2} (${aiManager.getWorkers()[idx + 1].modelId}):\n${res.content}`,
+                metadata: { turn, worker: idx + 2 }
+              })
+            })
+          } else {
+            // If all parallel workers failed, try with fallback logic
+            assistantMessage = await aiManager.runWithFallback(messages, toolsEnabled ? AGENT_TOOLS : undefined, cancellationToken)
+          }
+        } else {
+          // Use sequential fallback for phases that don't support parallel swarm
+          assistantMessage = await aiManager.runWithFallback(messages, toolsEnabled ? AGENT_TOOLS : undefined, cancellationToken)
+        }
+      } else {
+        assistantMessage = await openRouterClient.chatCompletion(
+          messages,
+          toolsEnabled ? AGENT_TOOLS : undefined
+        )
+      }
 
       cancellationToken.throwIfCancelled()
       history.push(assistantMessage)

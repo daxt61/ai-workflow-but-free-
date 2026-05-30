@@ -16,6 +16,8 @@ import type { ShellService } from '../services/ShellService'
 import { CancellationError, CancellationToken } from './CancellationToken'
 import { PhaseRunner, createLogEntry } from './PhaseRunner'
 import { ToolExecutor } from './ToolExecutor'
+import { AIManager } from './AIManager'
+import { SettingsService } from '../services/SettingsService'
 import type { BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import { TARGET_TASK_MIN_MS, TARGET_TASK_MAX_MS } from '@shared/agentConfig'
@@ -34,15 +36,24 @@ export class AgentOrchestrator {
   private currentPhase: AgentPhase = 'research'
   private getWindow: () => BrowserWindow | null
 
+  private aiManager: AIManager
+
   constructor(
     private fileService: FileService,
     private shellService: ShellService,
     private searchService: SearchService,
     private openRouterClient: OpenRouterClient,
     private diffTracker: DiffTracker,
+    private settingsService: SettingsService,
     getWindow: () => BrowserWindow | null
   ) {
     this.getWindow = getWindow
+    this.aiManager = new AIManager(
+      () => this.settingsService.getApiKey(),
+      () => this.settingsService.getGroqKey(),
+      () => this.settingsService.getGeminiKey(),
+      (entry) => this.log(entry)
+    )
   }
 
   isRunning(): boolean {
@@ -70,6 +81,12 @@ export class AgentOrchestrator {
     this.fileService.setProjectFolder(params.projectFolder)
     this.shellService.setProjectFolder(params.projectFolder)
     this.openRouterClient.setModelId(params.modelId)
+    this.aiManager.setProjectFolder(params.projectFolder)
+
+    const settings = this.settingsService.getSettings()
+    const pool = settings.modelPool.length > 0 ? settings.modelPool : [params.modelId]
+    this.aiManager.setupWorkers(pool, params.modelId)
+    await this.aiManager.initTaskBoard(params.description)
 
     let messageHistory: ChatMessage[] = [
       {
@@ -116,7 +133,8 @@ export class AgentOrchestrator {
           this.openRouterClient,
           toolExecutor,
           this.cancellationToken,
-          (entry) => this.log(entry)
+          (entry) => this.log(entry),
+          this.aiManager
         )
 
         this.cancellationToken.throwIfCancelled()

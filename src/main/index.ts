@@ -35,6 +35,7 @@ const orchestrator = new AgentOrchestrator(
   searchService,
   openRouterClient,
   diffTracker,
+  settingsService,
   () => mainWindow
 )
 
