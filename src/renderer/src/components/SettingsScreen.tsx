@@ -11,6 +11,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const { settings, models, modelsError, setSettings, setModels, setModelsError } = useAppStore()
 
   const [apiKey, setApiKey] = useState('')
+  const [groqKey, setGroqKey] = useState(settings?.groqApiKey ?? '')
+  const [geminiKey, setGeminiKey] = useState(settings?.geminiApiKey ?? '')
+  const [modelPool, setModelPool] = useState<string[]>(settings?.modelPool ?? [])
   const [searxUrl, setSearxUrl] = useState(settings?.searxInstanceUrl ?? '')
   const [braveKey, setBraveKey] = useState(settings?.searchProviderKey ?? '')
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -18,7 +21,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const [projectFolder, setProjectFolder] = useState(settings?.projectFolder ?? '')
   const [status, setStatus] = useState<string | null>(null)
   const [loadingModels, setLoadingModels] = useState(false)
-  const [modelBrowserOpen, setModelBrowserOpen] = useState(false)
+  const [modelBrowserOpen, setModelBrowserOpen] = useState<boolean | 'pool'>(false)
 
   const refreshModels = async (): Promise<void> => {
     setLoadingModels(true)
@@ -49,6 +52,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
     setStatus(null)
     await window.slowburn.saveSettings({
       apiKey: apiKey || undefined,
+      groqApiKey: groqKey,
+      geminiApiKey: geminiKey,
+      modelPool,
       searxInstanceUrl: searxUrl,
       searchProviderKey: braveKey,
       selectedModelId: modelId,
@@ -107,6 +113,26 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
           />
         </label>
 
+        <label>
+          Groq API key
+          <input
+            type="password"
+            value={groqKey}
+            onChange={(e) => setGroqKey(e.target.value)}
+            placeholder="gsk_..."
+          />
+        </label>
+
+        <label>
+          Gemini API key
+          <input
+            type="password"
+            value={geminiKey}
+            onChange={(e) => setGeminiKey(e.target.value)}
+            placeholder="AIza..."
+          />
+        </label>
+
         <p className="settings-hint">
           Web search is <strong>free</strong> — SearXNG + DuckDuckGo, no API key required.
         </p>
@@ -132,7 +158,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
         </label>
 
         <div className="model-picker-block">
-          <span className="field-label">Model</span>
+          <span className="field-label">Primary Model</span>
           <div className="selected-model-chip">
             {modelId ? (
               <>
@@ -166,8 +192,28 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
           open={modelBrowserOpen}
           onClose={() => setModelBrowserOpen(false)}
           selectedId={modelId}
-          onSelect={(m: OpenRouterModel) => setModelId(m.id)}
+          onSelect={(m: OpenRouterModel) => {
+            if (modelBrowserOpen === 'pool') {
+              if (!modelPool.includes(m.id)) setModelPool([...modelPool, m.id])
+            } else {
+              setModelId(m.id)
+            }
+          }}
         />
+
+        <div className="model-pool-block">
+          <span className="field-label">Model Pool (AI Swarm)</span>
+          <div className="model-pool-list">
+            {modelPool.map(id => (
+              <div key={id} className="model-pool-item">
+                <span>{id}</span>
+                <button type="button" onClick={() => setModelPool(modelPool.filter(m => m !== id))}>✕</button>
+              </div>
+            ))}
+            {modelPool.length === 0 && <p className="muted">No models in pool. Primary model will be used.</p>}
+          </div>
+          <button type="button" onClick={() => setModelBrowserOpen('pool')}>Add to pool...</button>
+        </div>
 
         <button
           type="button"

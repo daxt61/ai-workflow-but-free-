@@ -13,6 +13,9 @@ export interface AppSettings {
   searxInstanceUrl: string
   hasApiKey: boolean
   apiKeyLast4: string
+  groqApiKey?: string
+  geminiApiKey?: string
+  modelPool: string[]
 }
 
 export interface OpenRouterModel {

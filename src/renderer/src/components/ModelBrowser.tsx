@@ -9,7 +9,7 @@ import {
 import { useAppStore } from '../store/useAppStore'
 
 interface ModelBrowserProps {
-  open: boolean
+  open: boolean | 'pool'
   onClose: () => void
   selectedId: string
   onSelect: (model: OpenRouterModel) => void
