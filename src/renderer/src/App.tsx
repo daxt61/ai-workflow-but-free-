@@ -4,6 +4,7 @@ import { LogPanel } from './components/LogPanel'
 import { TaskInput } from './components/TaskInput'
 import { DiffView } from './components/DiffView'
 import { AILiveDashboard } from './components/AILiveDashboard'
+import { TaskBoard } from './components/TaskBoard'
 import { SettingsScreen } from './components/SettingsScreen'
 import { loadInitialData, useSlowburnIpc } from './hooks/useSlowburnIpc'
 import { useAppStore } from './store/useAppStore'
@@ -47,6 +48,7 @@ function App(): React.JSX.Element {
 
       <ProgressBar />
       <TaskInput />
+      <TaskBoard />
       <AILiveDashboard />
       <LogPanel />
       <DiffView />

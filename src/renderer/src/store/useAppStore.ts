@@ -20,6 +20,8 @@ interface AppState {
   models: OpenRouterModel[]
   activeTaskDescription: string
   modelsError: string | null
+  taskBoard: TaskBoardState | null
+  workerStatuses: WorkerStatus[]
   setTaskStatus: (status: TaskStatus) => void
   setPhase: (update: PhaseUpdate) => void
   appendLogEntry: (entry: LogEntry) => void
@@ -28,6 +30,8 @@ interface AppState {
   setModels: (models: OpenRouterModel[]) => void
   setModelsError: (error: string | null) => void
   setActiveTaskDescription: (description: string) => void
+  setTaskBoard: (board: TaskBoardState) => void
+  setWorkerStatuses: (statuses: WorkerStatus[]) => void
   resetTask: () => void
 }
 
@@ -41,6 +45,8 @@ export const useAppStore = create<AppState>((set) => ({
   models: [],
   activeTaskDescription: '',
   modelsError: null,
+  taskBoard: null,
+  workerStatuses: [],
   setTaskStatus: (taskStatus) => set({ taskStatus }),
   setPhase: (update) =>
     set({
@@ -54,12 +60,16 @@ export const useAppStore = create<AppState>((set) => ({
   setModels: (models) => set({ models, modelsError: null }),
   setModelsError: (modelsError) => set({ modelsError }),
   setActiveTaskDescription: (activeTaskDescription) => set({ activeTaskDescription }),
+  setTaskBoard: (taskBoard) => set({ taskBoard }),
+  setWorkerStatuses: (workerStatuses) => set({ workerStatuses }),
   resetTask: () =>
     set({
       logEntries: [],
       diffs: [],
       currentPhase: null,
       phaseIndex: 0,
-      activeTaskDescription: ''
+      activeTaskDescription: '',
+      taskBoard: null,
+      workerStatuses: []
     })
 }))

@@ -108,6 +108,27 @@ export interface FileDiff {
   status: 'created' | 'modified' | 'deleted'
 }
 
+export interface SubTask {
+  id: string
+  title: string
+  description: string
+  status: 'todo' | 'in_progress' | 'done' | 'failed'
+  assignedTo?: string
+}
+
+export interface TaskBoardState {
+  mainTask: string
+  subTasks: SubTask[]
+}
+
+export interface WorkerStatus {
+  id: string
+  modelId: string
+  status: 'idle' | 'working' | 'thinking' | 'failed'
+  lastAction: string
+  currentTask?: string
+}
+
 export interface TaskResult {
   success: boolean
   diffs: FileDiff[]
@@ -186,4 +207,7 @@ export interface SlowBurnAPI {
   onTaskComplete(callback: (result: TaskResult) => void): () => void
   onTaskError(callback: (error: TaskError) => void): () => void
   onDiffReady(callback: (diffs: FileDiff[]) => void): () => void
+  onTaskBoardUpdate(callback: (state: TaskBoardState) => void): () => void
+  onWorkerStatusUpdate(callback: (statuses: WorkerStatus[]) => void): () => void
+  workerCommand(workerId: string, command: 'stop' | 'restart' | 'reprompt', payload?: string): Promise<void>
 }

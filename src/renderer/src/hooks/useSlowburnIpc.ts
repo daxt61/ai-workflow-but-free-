@@ -12,6 +12,7 @@ export function useSlowburnIpc(): void {
 
   useEffect(() => {
     const api = window.slowburn
+    const { setTaskBoard, setWorkerStatuses } = useAppStore.getState()
     const unsubs = [
       api.onLogEntry(appendLogEntry),
       api.onPhaseChange(setPhase),
@@ -27,7 +28,9 @@ export function useSlowburnIpc(): void {
       }),
       api.onTaskError(() => {
         setTaskStatus('failed')
-      })
+      }),
+      api.onTaskBoardUpdate(setTaskBoard),
+      api.onWorkerStatusUpdate(setWorkerStatuses)
     ]
     return () => unsubs.forEach((u) => u())
   }, [appendLogEntry, setPhase, setTaskStatus, setDiffs, resetTask])

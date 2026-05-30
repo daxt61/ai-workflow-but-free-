@@ -11,5 +11,8 @@ export const IPC = {
   PHASE_CHANGE: 'phase:change',
   TASK_COMPLETE: 'task:complete',
   TASK_ERROR: 'task:error',
-  DIFF_READY: 'diff:ready'
+  DIFF_READY: 'diff:ready',
+  TASK_BOARD_UPDATE: 'task:board-update',
+  WORKER_STATUS_UPDATE: 'worker:status-update',
+  WORKER_COMMAND: 'worker:command'
 } as const

@@ -88,7 +88,31 @@ export class PhaseRunner {
         if (aiManager.getWorkers().length > 1 && (phase === 'implementation' || phase === 'research')) {
           const results = await aiManager.runParallel(messages, toolsEnabled ? AGENT_TOOLS : undefined, cancellationToken)
           if (results.length > 0) {
-            // Simple merge strategy: use the first one as primary, but log all
+            // Execute tool calls for ALL workers that produced them
+            for (const res of results) {
+              const tc = res.tool_calls
+              if (tc && tc.length > 0) {
+                onLog({
+                  type: 'phase_progress',
+                  phase,
+                  content: `Executing tools from Worker (${aiManager.getWorkers().find(w => w.client === aiManager.getWorkers()[results.indexOf(res)].client)?.id})...`
+                })
+                for (const call of tc) {
+                  cancellationToken.throwIfCancelled()
+                  let args: Record<string, string> = {}
+                  try { args = JSON.parse(call.function.arguments) } catch {}
+                  const result = await toolExecutor.execute(call.function.name, args)
+                  history.push({
+                    role: 'tool',
+                    tool_call_id: call.id,
+                    name: call.function.name,
+                    content: result
+                  })
+                }
+              }
+            }
+
+            // Primary assistant message for the history
             assistantMessage = results[0]
 
             // Log other worker results

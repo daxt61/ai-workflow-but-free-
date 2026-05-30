@@ -99,7 +99,8 @@ app.whenReady().then(() => {
     openRouterClient,
     orchestrator,
     diffTracker,
-    getApiKey: () => settingsService.getApiKey()
+    getApiKey: () => settingsService.getApiKey(),
+    aiManager: orchestrator.getAIManager()
   })
 
   createWindow()
