@@ -210,4 +210,5 @@ export interface SlowBurnAPI {
   onTaskBoardUpdate(callback: (state: TaskBoardState) => void): () => void
   onWorkerStatusUpdate(callback: (statuses: WorkerStatus[]) => void): () => void
   workerCommand(workerId: string, command: 'stop' | 'restart' | 'reprompt', payload?: string): Promise<void>
+  buildRelease(): Promise<void>
 }

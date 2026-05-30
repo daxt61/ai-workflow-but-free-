@@ -76,6 +76,18 @@ export function registerIpcHandlers(deps: {
     return aiManager.handleWorkerCommand(workerId, command, payload)
   })
 
+  ipcMain.handle(IPC.BUILD_RELEASE, async () => {
+    const { exec } = require('child_process')
+    const util = require('util')
+    const execPromise = util.promisify(exec)
+    try {
+      await execPromise('npx tsx scripts/build-release.ts')
+    } catch (err) {
+      console.error('Manual build failed:', err)
+      throw err
+    }
+  })
+
   ipcMain.handle(IPC.FOLDER_SELECT, async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory']

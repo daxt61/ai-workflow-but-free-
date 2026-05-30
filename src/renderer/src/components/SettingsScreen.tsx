@@ -21,6 +21,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const [projectFolder, setProjectFolder] = useState(settings?.projectFolder ?? '')
   const [status, setStatus] = useState<string | null>(null)
   const [loadingModels, setLoadingModels] = useState(false)
+  const [isBuilding, setIsBuilding] = useState(false)
   const [modelBrowserOpen, setModelBrowserOpen] = useState<boolean | 'pool'>(false)
 
   const refreshModels = async (): Promise<void> => {
@@ -72,6 +73,19 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const pickFolder = async (): Promise<void> => {
     const path = await window.slowburn.selectFolder()
     if (path) setProjectFolder(path)
+  }
+
+  const buildRelease = async (): Promise<void> => {
+    setIsBuilding(true)
+    setStatus('Building release...')
+    try {
+      await window.slowburn.buildRelease()
+      setStatus('Release built successfully! Check the "releases" folder.')
+    } catch (err) {
+      setStatus(`Build failed: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setIsBuilding(false)
+    }
   }
 
   const resetAll = async (): Promise<void> => {
@@ -238,6 +252,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
         <div className="settings-actions">
           <button type="button" className="primary" onClick={() => void save()}>
             Save
+          </button>
+          <button type="button" onClick={() => void buildRelease()} disabled={isBuilding}>
+            {isBuilding ? 'Building...' : 'Build 1-Click Release'}
           </button>
           <button type="button" className="danger" onClick={() => void resetAll()}>
             Reset settings

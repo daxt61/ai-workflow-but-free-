@@ -1,7 +1,8 @@
-appId: com.electron.app
-productName: react-ts
+appId: com.slowburn.agent
+productName: SlowBurn
 directories:
   buildResources: build
+  output: dist
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -12,9 +13,9 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: react-ts
+  executableName: SlowBurn
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: SlowBurn-Setup-${version}.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always

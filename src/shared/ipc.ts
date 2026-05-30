@@ -14,5 +14,6 @@ export const IPC = {
   DIFF_READY: 'diff:ready',
   TASK_BOARD_UPDATE: 'task:board-update',
   WORKER_STATUS_UPDATE: 'worker:status-update',
-  WORKER_COMMAND: 'worker:command'
+  WORKER_COMMAND: 'worker:command',
+  BUILD_RELEASE: 'build:release'
 } as const
