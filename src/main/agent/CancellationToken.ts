@@ -7,9 +7,11 @@ export class CancellationError extends Error {
 
 export class CancellationToken {
   private _cancelled = false
+  private _controller = new AbortController()
 
   cancel(): void {
     this._cancelled = true
+    this._controller.abort()
   }
 
   get isCancelled(): boolean {
@@ -22,5 +24,10 @@ export class CancellationToken {
 
   reset(): void {
     this._cancelled = false
+    this._controller = new AbortController()
+  }
+
+  get signal(): AbortSignal {
+    return this._controller.signal
   }
 }

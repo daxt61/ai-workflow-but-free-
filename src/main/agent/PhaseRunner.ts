@@ -119,7 +119,7 @@ export class PhaseRunner {
                   let args: Record<string, string> = {}
                   try { args = JSON.parse(call.function.arguments) } catch {}
                   // If it's a task board update, we execute it to keep workers synced
-                  const result = await toolExecutor.execute(call.function.name, args)
+                  await toolExecutor.execute(call.function.name, args)
                   if (call.function.name === 'write_file' && args.path?.endsWith('.slowburn_tasks.md')) {
                     onLog({
                       type: 'phase_progress',

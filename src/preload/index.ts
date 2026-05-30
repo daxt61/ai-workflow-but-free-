@@ -32,7 +32,12 @@ const slowburn: SlowBurnAPI = {
   onPhaseChange: (callback) => subscribe<PhaseUpdate>(IPC.PHASE_CHANGE, callback),
   onTaskComplete: (callback) => subscribe<TaskResult>(IPC.TASK_COMPLETE, callback),
   onTaskError: (callback) => subscribe<TaskError>(IPC.TASK_ERROR, callback),
-  onDiffReady: (callback) => subscribe<FileDiff[]>(IPC.DIFF_READY, callback)
+  onDiffReady: (callback) => subscribe<FileDiff[]>(IPC.DIFF_READY, callback),
+  onTaskBoardUpdate: (callback) => subscribe(IPC.TASK_BOARD_UPDATE, callback),
+  onWorkerStatusUpdate: (callback) => subscribe(IPC.WORKER_STATUS_UPDATE, callback),
+  workerCommand: (workerId, command, payload) =>
+    ipcRenderer.invoke(IPC.WORKER_COMMAND, { workerId, command, payload }),
+  buildRelease: () => ipcRenderer.invoke(IPC.BUILD_RELEASE)
 }
 
 if (process.contextIsolated) {
