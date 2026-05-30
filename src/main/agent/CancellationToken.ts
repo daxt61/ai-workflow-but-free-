@@ -6,21 +6,25 @@ export class CancellationError extends Error {
 }
 
 export class CancellationToken {
-  private _cancelled = false
+  private controller = new AbortController()
 
   cancel(): void {
-    this._cancelled = true
+    this.controller.abort()
   }
 
   get isCancelled(): boolean {
-    return this._cancelled
+    return this.controller.signal.aborted
+  }
+
+  get signal(): AbortSignal {
+    return this.controller.signal
   }
 
   throwIfCancelled(): void {
-    if (this._cancelled) throw new CancellationError()
+    if (this.isCancelled) throw new CancellationError()
   }
 
   reset(): void {
-    this._cancelled = false
+    this.controller = new AbortController()
   }
 }
