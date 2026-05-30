@@ -73,7 +73,7 @@ export class GeminiClient implements LLMClient {
     const contents = messages.filter(m => m.role !== 'system').map(m => {
       if (m.role === 'tool') {
         return {
-          role: 'function',
+          role: 'user',
           parts: [{
             functionResponse: {
               name: m.name,

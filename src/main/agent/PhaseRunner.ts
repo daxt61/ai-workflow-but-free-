@@ -88,8 +88,48 @@ export class PhaseRunner {
         if (aiManager.getWorkers().length > 1 && (phase === 'implementation' || phase === 'research')) {
           const results = await aiManager.runParallel(messages, toolsEnabled ? AGENT_TOOLS : undefined, cancellationToken)
           if (results.length > 0) {
-            // Simple merge strategy: use the first one as primary, but log all
+            // Use the Lead worker (worker 1) as the primary history keeper
             assistantMessage = results[0]
+            history.push(assistantMessage)
+
+            // Execute tool calls for the lead worker
+            const leadTc = assistantMessage.tool_calls
+            if (leadTc && leadTc.length > 0) {
+              for (const call of leadTc) {
+                cancellationToken.throwIfCancelled()
+                let args: Record<string, string> = {}
+                try { args = JSON.parse(call.function.arguments) } catch {}
+                const result = await toolExecutor.execute(call.function.name, args)
+                history.push({
+                  role: 'tool',
+                  tool_call_id: call.id,
+                  name: call.function.name,
+                  content: result
+                })
+              }
+            }
+
+            // For other workers, execute their tools and log results but don't pollute the main history
+            // except for updates to the task board which we want to persist.
+            for (const res of results.slice(1)) {
+              const tc = res.tool_calls
+              if (tc && tc.length > 0) {
+                for (const call of tc) {
+                  cancellationToken.throwIfCancelled()
+                  let args: Record<string, string> = {}
+                  try { args = JSON.parse(call.function.arguments) } catch {}
+                  // If it's a task board update, we execute it to keep workers synced
+                  const result = await toolExecutor.execute(call.function.name, args)
+                  if (call.function.name === 'write_file' && args.path?.endsWith('.slowburn_tasks.md')) {
+                    onLog({
+                      type: 'phase_progress',
+                      phase,
+                      content: `Worker ${results.indexOf(res) + 1} updated the task board.`
+                    })
+                  }
+                }
+              }
+            }
 
             // Log other worker results
             results.slice(1).forEach((res, idx) => {
@@ -116,7 +156,9 @@ export class PhaseRunner {
       }
 
       cancellationToken.throwIfCancelled()
-      history.push(assistantMessage)
+      if (!aiManager || aiManager.getWorkers().length <= 1 || (phase !== 'implementation' && phase !== 'research')) {
+        history.push(assistantMessage)
+      }
 
       const reasoningText = assistantMessage.reasoning?.trim() ?? ''
       const contentText = assistantMessage.content?.trim() ?? ''

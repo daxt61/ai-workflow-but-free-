@@ -1,0 +1,57 @@
+name: Automated Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'electron-builder.yml'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Build and Package
+        run: npx electron-builder --win --mac --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move Artifacts to Releases
+        run: |
+          mkdir -p releases
+          mv dist/*.exe releases/ 2>/dev/null || true
+          mv dist/*.dmg releases/ 2>/dev/null || true
+          mv dist/*.AppImage releases/ 2>/dev/null || true
+          mv dist/*.zip releases/ 2>/dev/null || true
+
+      - name: Commit Releases
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add releases/
+          git commit -m "chore: automated release [skip ci]" || echo "No changes to commit"
+          git push origin main

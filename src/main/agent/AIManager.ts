@@ -1,4 +1,4 @@
-import { ChatMessage, ToolDefinition } from '@shared/types'
+import { ChatMessage, ToolDefinition, TaskBoardState, WorkerStatus } from '@shared/types'
 import { LLMClient } from '../services/LLMClient'
 import { OpenRouterClient } from '../services/OpenRouterClient'
 import { GroqClient } from '../services/GroqClient'
@@ -7,6 +7,8 @@ import { CancellationToken } from './CancellationToken'
 import { LogEntry } from '@shared/types'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { IPC } from '@shared/ipc'
+import { BrowserWindow } from 'electron'
 
 export interface AIWorker {
   id: string
@@ -19,29 +21,81 @@ export interface AIWorker {
 export class AIManager {
   private workers: AIWorker[] = []
   private taskBoardPath: string = ''
+  private memoryPath: string = ''
   private projectFolder: string = ''
+  private boardState: TaskBoardState = { mainTask: '', subTasks: [] }
 
   constructor(
     private getOpenRouterKey: () => string | null,
     private getGroqKey: () => string | null,
     private getGeminiKey: () => string | null,
-    private onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
+    private onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void,
+    private getWindow: () => BrowserWindow | null
   ) {}
 
   setProjectFolder(folder: string) {
     this.projectFolder = folder
     this.taskBoardPath = path.join(folder, '.slowburn_tasks.md')
+    this.memoryPath = path.join(folder, '.slowburn_memory.json')
+  }
+
+  private emit(channel: string, payload: unknown): void {
+    const win = this.getWindow()
+    win?.webContents.send(channel, payload)
+  }
+
+  private updateWorkerStatus() {
+    const statuses: WorkerStatus[] = this.workers.map((w) => ({
+      id: w.id,
+      modelId: w.modelId,
+      status: w.status,
+      lastAction: w.lastAction
+    }))
+    this.emit(IPC.WORKER_STATUS_UPDATE, statuses)
   }
 
   async initTaskBoard(taskDescription: string) {
     if (!this.projectFolder) return
-    const initialContent = `# SlowBurn Task Board\n\n## Main Task\n${taskDescription}\n\n## Sub-tasks\n- [ ] Research the task requirements\n- [ ] Create a detailed plan\n\n## AI Worker Status\n(initialized)\n`
-    await fs.writeFile(this.taskBoardPath, initialContent)
+    this.boardState = {
+      mainTask: taskDescription,
+      subTasks: [
+        { id: 't1', title: 'Research task requirements', description: 'Analyze the codebase and requirements', status: 'todo' },
+        { id: 't2', title: 'Create detailed plan', description: 'Draft a step-by-step implementation plan', status: 'todo' }
+      ]
+    }
+    await this.saveBoard()
+    this.updateWorkerStatus()
+  }
+
+  private async saveBoard() {
+    const content = `# SlowBurn Task Board\n\n## Main Task\n${this.boardState.mainTask}\n\n## Sub-tasks\n${this.boardState.subTasks
+      .map((t) => `- [${t.status === 'done' ? 'x' : ' '}] **${t.title}** (${t.id}): ${t.description}${t.assignedTo ? ` [Assigned to ${t.assignedTo}]` : ''}`)
+      .join('\n')}\n`
+    await fs.writeFile(this.taskBoardPath, content)
+    this.emit(IPC.TASK_BOARD_UPDATE, this.boardState)
   }
 
   async updateTaskBoard(content: string) {
     if (!this.taskBoardPath) return
+    // Enhanced heuristic to sync markdown back to boardState
+    const subTasks: any[] = []
+    const lines = content.split('\n')
+    for (const line of lines) {
+      // More flexible match for task entries
+      const match = line.match(/- \[( |x|X)\]\s*(?:\*\*)?(.*?)(?:\*\*)?\s*(?:\((.*?)\))?:\s*(.*)/)
+      if (match) {
+        const id = match[3] || `t${subTasks.length + 1}`
+        subTasks.push({
+          id,
+          title: match[2].trim(),
+          description: match[4].split(' [Assigned to')[0].trim(),
+          status: (match[1].toLowerCase() === 'x') ? 'done' : 'todo'
+        })
+      }
+    }
+    if (subTasks.length > 0) this.boardState.subTasks = subTasks
     await fs.writeFile(this.taskBoardPath, content)
+    this.emit(IPC.TASK_BOARD_UPDATE, this.boardState)
   }
 
   async readTaskBoard(): Promise<string> {
@@ -88,10 +142,12 @@ export class AIManager {
 
     for (const worker of this.workers) {
       worker.status = 'working'
+        this.updateWorkerStatus()
       try {
         const response = await worker.client.chatCompletion(messages, tools, cancellationToken?.signal)
         worker.status = 'idle'
         worker.lastAction = 'Completed turn'
+          this.updateWorkerStatus()
         return response
       } catch (err) {
         console.error(`Worker ${worker.id} (${worker.modelId}) failed:`, err)
@@ -128,6 +184,7 @@ export class AIManager {
     const results = await Promise.allSettled(
       this.workers.map(async (worker, index) => {
         worker.status = 'working'
+        this.updateWorkerStatus()
         const workerSpecificMessages = [
           ...messages,
           {
@@ -139,10 +196,12 @@ export class AIManager {
           const response = await worker.client.chatCompletion(workerSpecificMessages, tools, cancellationToken?.signal)
           worker.status = 'idle'
           worker.lastAction = 'Completed parallel task'
+          this.updateWorkerStatus()
           return response
         } catch (err) {
           worker.status = 'failed'
           worker.lastAction = `Error: ${err instanceof Error ? err.message : String(err)}`
+          this.updateWorkerStatus()
           throw err
         }
       })
@@ -155,5 +214,41 @@ export class AIManager {
 
   getWorkers() {
     return this.workers
+  }
+
+  async handleWorkerCommand(workerId: string, command: 'stop' | 'restart' | 'reprompt', payload?: string) {
+    const worker = this.workers.find(w => w.id === workerId)
+    if (!worker) return
+
+    if (command === 'stop') {
+      worker.client.abort()
+      worker.status = 'failed'
+      worker.lastAction = 'Stopped by user'
+    } else if (command === 'restart') {
+      worker.status = 'idle'
+      worker.lastAction = 'Restarted by user'
+    } else if (command === 'reprompt') {
+      worker.lastAction = `Reprompted: ${payload}`
+    }
+    this.updateWorkerStatus()
+  }
+
+  async saveMemory(data: any) {
+    if (!this.memoryPath) return
+    let current = {}
+    try {
+      current = JSON.parse(await fs.readFile(this.memoryPath, 'utf8'))
+    } catch {}
+    const updated = { ...current, ...data }
+    await fs.writeFile(this.memoryPath, JSON.stringify(updated, null, 2))
+  }
+
+  async getMemory() {
+    if (!this.memoryPath) return {}
+    try {
+      return JSON.parse(await fs.readFile(this.memoryPath, 'utf8'))
+    } catch {
+      return {}
+    }
   }
 }

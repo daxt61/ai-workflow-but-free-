@@ -52,7 +52,8 @@ export class AgentOrchestrator {
       () => this.settingsService.getApiKey(),
       () => this.settingsService.getGroqKey(),
       () => this.settingsService.getGeminiKey(),
-      (entry) => this.log(entry)
+      (entry) => this.log(entry),
+      getWindow
     )
   }
 
@@ -175,5 +176,9 @@ export class AgentOrchestrator {
   cancel(): void {
     this.cancellationToken.cancel()
     this.openRouterClient.abort()
+  }
+
+  getAIManager(): AIManager {
+    return this.aiManager
   }
 }
