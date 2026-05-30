@@ -5,7 +5,9 @@ import type {
   FileDiff,
   LogEntry,
   OpenRouterModel,
-  PhaseUpdate
+  PhaseUpdate,
+  TaskBoardState,
+  WorkerStatus
 } from '@shared/types'
 
 export type TaskStatus = 'idle' | 'running' | 'complete' | 'failed' | 'cancelled'

@@ -182,7 +182,7 @@ export class AIManager {
 
     const board = await this.readTaskBoard()
     const results = await Promise.allSettled(
-      this.workers.map(async (worker, index) => {
+      this.workers.map(async (worker) => {
         worker.status = 'working'
         this.updateWorkerStatus()
         const workerSpecificMessages = [

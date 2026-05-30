@@ -9,8 +9,10 @@ import type {
   PhaseUpdate,
   SlowBurnAPI,
   StartTaskParams,
+  TaskBoardState,
   TaskError,
-  TaskResult
+  TaskResult,
+  WorkerStatus
 } from '@shared/types'
 
 function subscribe<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -32,7 +34,11 @@ const slowburn: SlowBurnAPI = {
   onPhaseChange: (callback) => subscribe<PhaseUpdate>(IPC.PHASE_CHANGE, callback),
   onTaskComplete: (callback) => subscribe<TaskResult>(IPC.TASK_COMPLETE, callback),
   onTaskError: (callback) => subscribe<TaskError>(IPC.TASK_ERROR, callback),
-  onDiffReady: (callback) => subscribe<FileDiff[]>(IPC.DIFF_READY, callback)
+  onDiffReady: (callback) => subscribe<FileDiff[]>(IPC.DIFF_READY, callback),
+  onTaskBoardUpdate: (callback) => subscribe<TaskBoardState>(IPC.TASK_BOARD_UPDATE, callback),
+  onWorkerStatusUpdate: (callback) => subscribe<WorkerStatus[]>(IPC.WORKER_STATUS_UPDATE, callback),
+  workerCommand: (workerId, command, payload) => ipcRenderer.invoke(IPC.WORKER_COMMAND, workerId, command, payload),
+  buildRelease: () => ipcRenderer.invoke(IPC.BUILD_RELEASE)
 }
 
 if (process.contextIsolated) {

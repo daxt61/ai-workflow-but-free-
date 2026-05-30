@@ -12,10 +12,11 @@ export function AILiveDashboard(): React.JSX.Element | null {
     : logEntries
 
   const handleCommand = async (workerId: string, command: 'stop' | 'restart' | 'reprompt') => {
-    let payload = undefined
+    let payload: string | undefined = undefined
     if (command === 'reprompt') {
-      payload = prompt('Enter new instructions for this worker:')
-      if (!payload) return
+      const input = prompt('Enter new instructions for this worker:')
+      if (!input) return
+      payload = input
     }
     await window.slowburn.workerCommand(workerId, command, payload)
   }
@@ -52,7 +53,7 @@ export function AILiveDashboard(): React.JSX.Element | null {
         {filteredLogs.slice(-20).map(log => (
           <div key={log.id} className={`log-item ${log.type}`}>
              <span className="log-phase">[{log.phase}]</span>
-             {log.metadata?.worker && <span className="log-worker">Worker {log.metadata.worker}:</span>}
+             {log.metadata?.worker ? <span className="log-worker">Worker {String(log.metadata.worker)}:</span> : null}
              <span className="log-content">{log.content}</span>
           </div>
         ))}
