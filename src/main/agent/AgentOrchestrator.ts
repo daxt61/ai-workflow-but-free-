@@ -52,6 +52,7 @@ export class AgentOrchestrator {
       () => this.settingsService.getApiKey(),
       () => this.settingsService.getGroqKey(),
       () => this.settingsService.getGeminiKey(),
+      () => this.settingsService.getLLM7Key(),
       (entry) => this.log(entry),
       getWindow
     )

@@ -10,6 +10,7 @@ import { OpenRouterClient } from './services/OpenRouterClient'
 import { SearchService } from './services/SearchService'
 import { SettingsService } from './services/SettingsService'
 import { ShellService } from './services/ShellService'
+import { ModelDiscoveryService } from './services/ModelDiscoveryService'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -28,6 +29,13 @@ const openRouterClient = new OpenRouterClient(
   settingsService.getSettings().selectedModelId
 )
 const diffTracker = new DiffTracker()
+
+const modelDiscoveryService = new ModelDiscoveryService(
+  () => settingsService.getApiKey(),
+  () => settingsService.getGroqKey(),
+  () => settingsService.getGeminiKey(),
+  () => settingsService.getLLM7Key()
+)
 
 const orchestrator = new AgentOrchestrator(
   fileService,
@@ -100,7 +108,8 @@ app.whenReady().then(() => {
     orchestrator,
     diffTracker,
     getApiKey: () => settingsService.getApiKey(),
-    aiManager: orchestrator.getAIManager()
+    aiManager: orchestrator.getAIManager(),
+    modelDiscoveryService
   })
 
   createWindow()

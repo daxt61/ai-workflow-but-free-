@@ -15,6 +15,7 @@ export interface AppSettings {
   apiKeyLast4: string
   groqApiKey?: string
   geminiApiKey?: string
+  llm7ApiKey?: string
   modelPool: string[]
 }
 

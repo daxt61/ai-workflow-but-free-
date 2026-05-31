@@ -3,6 +3,7 @@ import { LLMClient } from '../services/LLMClient'
 import { OpenRouterClient } from '../services/OpenRouterClient'
 import { GroqClient } from '../services/GroqClient'
 import { GeminiClient } from '../services/GeminiClient'
+import { LLM7Client } from '../services/LLM7Client'
 import { CancellationToken } from './CancellationToken'
 import { LogEntry } from '@shared/types'
 import * as fs from 'fs/promises'
@@ -29,6 +30,7 @@ export class AIManager {
     private getOpenRouterKey: () => string | null,
     private getGroqKey: () => string | null,
     private getGeminiKey: () => string | null,
+    private getLLM7Key: () => string | null,
     private onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void,
     private getWindow: () => BrowserWindow | null
   ) {}
@@ -113,12 +115,15 @@ export class AIManager {
       let client: LLMClient
       const groqKey = this.getGroqKey()
       const geminiKey = this.getGeminiKey()
+      const llm7Key = this.getLLM7Key()
 
       // Only use direct clients if API keys are provided AND it matches the specific provider
       if (geminiKey && (modelId.includes('gemini') || modelId.includes('gemma')) && !modelId.includes(':')) {
         client = new GeminiClient(this.getGeminiKey, modelId)
       } else if (groqKey && (modelId.includes('llama') || modelId.includes('mixtral')) && !modelId.includes(':')) {
         client = new GroqClient(this.getGroqKey, modelId)
+      } else if (llm7Key && modelId.startsWith('llm7:')) {
+        client = new LLM7Client(this.getLLM7Key, modelId.replace('llm7:', ''))
       } else {
         client = new OpenRouterClient(this.getOpenRouterKey, modelId)
       }
@@ -142,15 +147,33 @@ export class AIManager {
 
     for (const worker of this.workers) {
       worker.status = 'working'
-        this.updateWorkerStatus()
+      this.updateWorkerStatus()
       try {
         const response = await worker.client.chatCompletion(messages, tools, cancellationToken?.signal)
         worker.status = 'idle'
         worker.lastAction = 'Completed turn'
-          this.updateWorkerStatus()
+        this.updateWorkerStatus()
         return response
       } catch (err) {
         console.error(`Worker ${worker.id} (${worker.modelId}) failed:`, err)
+
+        const isRateLimit =
+          err instanceof Error &&
+          (err.message.includes('429') || err.message.toLowerCase().includes('rate limit'))
+
+        if (isRateLimit) {
+          this.onLog({
+            type: 'error',
+            phase: 'implementation',
+            content: `Worker ${worker.id} rate limited. Attempting fallback to free model...`
+          })
+          try {
+            return await this.retryWithFreeModel(messages, tools, cancellationToken)
+          } catch (fallbackErr) {
+            console.error('Free model fallback failed:', fallbackErr)
+          }
+        }
+
         worker.status = 'failed'
         worker.lastAction = `Error: ${err instanceof Error ? err.message : String(err)}`
         lastError = err instanceof Error ? err : new Error(String(err))
@@ -163,6 +186,33 @@ export class AIManager {
       }
     }
     throw lastError ?? new Error('All workers failed')
+  }
+
+  private async retryWithFreeModel(
+    messages: ChatMessage[],
+    tools?: ToolDefinition[],
+    cancellationToken?: CancellationToken
+  ): Promise<ChatMessage> {
+    // Priority: Gemini Flash (if key), Groq (if key), OpenRouter free models
+    const geminiKey = this.getGeminiKey()
+    const groqKey = this.getGroqKey()
+
+    if (geminiKey) {
+      const client = new GeminiClient(this.getGeminiKey, 'gemini-1.5-flash')
+      this.onLog({ type: 'phase_progress', phase: 'implementation', content: 'Fallback: Using Gemini Flash' })
+      return client.chatCompletion(messages, tools, cancellationToken?.signal)
+    }
+
+    if (groqKey) {
+      const client = new GroqClient(this.getGroqKey, 'llama3-8b-8192')
+      this.onLog({ type: 'phase_progress', phase: 'implementation', content: 'Fallback: Using Groq Llama 3 8B' })
+      return client.chatCompletion(messages, tools, cancellationToken?.signal)
+    }
+
+    // Fallback to OpenRouter free models
+    const openRouterClient = new OpenRouterClient(this.getOpenRouterKey, 'google/gemma-2-9b-it:free')
+    this.onLog({ type: 'phase_progress', phase: 'implementation', content: 'Fallback: Using OpenRouter Free (Gemma 2)' })
+    return openRouterClient.chatCompletion(messages, tools, cancellationToken?.signal)
   }
 
   async runParallel(
@@ -199,6 +249,21 @@ export class AIManager {
           this.updateWorkerStatus()
           return response
         } catch (err) {
+          const isRateLimit =
+            err instanceof Error &&
+            (err.message.includes('429') || err.message.toLowerCase().includes('rate limit'))
+
+          if (isRateLimit) {
+            this.onLog({
+              type: 'error',
+              phase: 'implementation',
+              content: `Worker ${worker.id} rate limited in parallel mode. Retrying with free model...`
+            })
+            try {
+              return await this.retryWithFreeModel(workerSpecificMessages, tools, cancellationToken)
+            } catch {}
+          }
+
           worker.status = 'failed'
           worker.lastAction = `Error: ${err instanceof Error ? err.message : String(err)}`
           this.updateWorkerStatus()
