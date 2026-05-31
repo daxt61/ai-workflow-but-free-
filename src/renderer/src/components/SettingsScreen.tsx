@@ -13,6 +13,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const [apiKey, setApiKey] = useState('')
   const [groqKey, setGroqKey] = useState(settings?.groqApiKey ?? '')
   const [geminiKey, setGeminiKey] = useState(settings?.geminiApiKey ?? '')
+  const [llm7Key, setLlm7Key] = useState(settings?.llm7ApiKey ?? '')
   const [modelPool, setModelPool] = useState<string[]>(settings?.modelPool ?? [])
   const [searxUrl, setSearxUrl] = useState(settings?.searxInstanceUrl ?? '')
   const [braveKey, setBraveKey] = useState(settings?.searchProviderKey ?? '')
@@ -55,6 +56,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
       apiKey: apiKey || undefined,
       groqApiKey: groqKey,
       geminiApiKey: geminiKey,
+      llm7ApiKey: llm7Key,
       modelPool,
       searxInstanceUrl: searxUrl,
       searchProviderKey: braveKey,
@@ -144,6 +146,16 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
             value={geminiKey}
             onChange={(e) => setGeminiKey(e.target.value)}
             placeholder="AIza..."
+          />
+        </label>
+
+        <label>
+          LLM7.io API key
+          <input
+            type="password"
+            value={llm7Key}
+            onChange={(e) => setLlm7Key(e.target.value)}
+            placeholder="llm7_..."
           />
         </label>
 

@@ -15,6 +15,7 @@ interface PersistedStore {
   encryptedApiKey: string
   encryptedGroqKey: string
   encryptedGeminiKey: string
+  encryptedLLM7Key: string
   modelPool: string[]
   windowBounds: WindowBounds
 }
@@ -29,6 +30,7 @@ const defaults: PersistedStore = {
   encryptedApiKey: '',
   encryptedGroqKey: '',
   encryptedGeminiKey: '',
+  encryptedLLM7Key: '',
   modelPool: [],
   windowBounds: DEFAULT_BOUNDS
 }
@@ -96,10 +98,19 @@ export class SettingsService {
     this.encrypt('encryptedGeminiKey', key)
   }
 
+  getLLM7Key(): string | null {
+    return this.decrypt('encryptedLLM7Key')
+  }
+
+  setLLM7Key(key: string): void {
+    this.encrypt('encryptedLLM7Key', key)
+  }
+
   getSettings(): AppSettings {
     const key = this.getApiKey()
     const groqKey = this.getGroqKey()
     const geminiKey = this.getGeminiKey()
+    const llm7Key = this.getLLM7Key()
     return {
       projectFolder: this.store.get('projectFolder', ''),
       selectedModelId: this.store.get('selectedModelId', ''),
@@ -109,6 +120,7 @@ export class SettingsService {
       apiKeyLast4: key ? key.slice(-4) : '',
       groqApiKey: groqKey || '',
       geminiApiKey: geminiKey || '',
+      llm7ApiKey: llm7Key || '',
       modelPool: this.store.get('modelPool', [])
     }
   }
@@ -134,6 +146,9 @@ export class SettingsService {
     }
     if (partial.geminiApiKey !== undefined) {
       this.setGeminiKey(partial.geminiApiKey)
+    }
+    if (partial.llm7ApiKey !== undefined) {
+      this.setLLM7Key(partial.llm7ApiKey)
     }
     if (partial.modelPool !== undefined) {
       this.store.set('modelPool', partial.modelPool)

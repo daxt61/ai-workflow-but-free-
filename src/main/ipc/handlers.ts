@@ -6,6 +6,7 @@ import type { FileService } from '../services/FileService'
 import type { OpenRouterClient } from '../services/OpenRouterClient'
 import type { SettingsService } from '../services/SettingsService'
 import type { AIManager } from '../agent/AIManager'
+import type { ModelDiscoveryService } from '../services/ModelDiscoveryService'
 import type { AppSettings, StartTaskParams } from '@shared/types'
 import { IPC } from '@shared/ipc'
 
@@ -17,8 +18,16 @@ export function registerIpcHandlers(deps: {
   diffTracker: DiffTracker
   getApiKey: () => string | null
   aiManager: AIManager
+  modelDiscoveryService: ModelDiscoveryService
 }): void {
-  const { settingsService, fileService, openRouterClient, orchestrator, diffTracker, aiManager } = deps
+  const {
+    settingsService,
+    fileService,
+    orchestrator,
+    diffTracker,
+    aiManager,
+    modelDiscoveryService
+  } = deps
 
   ipcMain.handle(IPC.TASK_START, async (_event, params: StartTaskParams) => {
     if (!params.description?.trim()) {
@@ -69,7 +78,7 @@ export function registerIpcHandlers(deps: {
   )
 
   ipcMain.handle(IPC.MODELS_LIST, async () => {
-    return openRouterClient.listModels()
+    return modelDiscoveryService.listAllModels()
   })
 
   ipcMain.handle(IPC.WORKER_COMMAND, async (_event, { workerId, command, payload }) => {
