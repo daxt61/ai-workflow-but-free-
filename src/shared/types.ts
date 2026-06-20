@@ -16,6 +16,9 @@ export interface AppSettings {
   groqApiKey?: string
   geminiApiKey?: string
   llm7ApiKey?: string
+  pollinationsApiKey?: string
+  anthropicApiKey?: string
+  openaiApiKey?: string
   modelPool: string[]
 }
 

@@ -16,6 +16,9 @@ interface PersistedStore {
   encryptedGroqKey: string
   encryptedGeminiKey: string
   encryptedLLM7Key: string
+  encryptedPollinationsKey: string
+  encryptedAnthropicKey: string
+  encryptedOpenAIKey: string
   modelPool: string[]
   windowBounds: WindowBounds
 }
@@ -31,6 +34,9 @@ const defaults: PersistedStore = {
   encryptedGroqKey: '',
   encryptedGeminiKey: '',
   encryptedLLM7Key: '',
+  encryptedPollinationsKey: '',
+  encryptedAnthropicKey: '',
+  encryptedOpenAIKey: '',
   modelPool: [],
   windowBounds: DEFAULT_BOUNDS
 }
@@ -106,11 +112,38 @@ export class SettingsService {
     this.encrypt('encryptedLLM7Key', key)
   }
 
+  getPollinationsKey(): string | null {
+    return this.decrypt('encryptedPollinationsKey')
+  }
+
+  setPollinationsKey(key: string): void {
+    this.encrypt('encryptedPollinationsKey', key)
+  }
+
+  getAnthropicKey(): string | null {
+    return this.decrypt('encryptedAnthropicKey')
+  }
+
+  setAnthropicKey(key: string): void {
+    this.encrypt('encryptedAnthropicKey', key)
+  }
+
+  getOpenAIKey(): string | null {
+    return this.decrypt('encryptedOpenAIKey')
+  }
+
+  setOpenAIKey(key: string): void {
+    this.encrypt('encryptedOpenAIKey', key)
+  }
+
   getSettings(): AppSettings {
     const key = this.getApiKey()
     const groqKey = this.getGroqKey()
     const geminiKey = this.getGeminiKey()
     const llm7Key = this.getLLM7Key()
+    const pollinationsKey = this.getPollinationsKey()
+    const anthropicKey = this.getAnthropicKey()
+    const openaiKey = this.getOpenAIKey()
     return {
       projectFolder: this.store.get('projectFolder', ''),
       selectedModelId: this.store.get('selectedModelId', ''),
@@ -121,6 +154,9 @@ export class SettingsService {
       groqApiKey: groqKey || '',
       geminiApiKey: geminiKey || '',
       llm7ApiKey: llm7Key || '',
+      pollinationsApiKey: pollinationsKey || '',
+      anthropicApiKey: anthropicKey || '',
+      openaiApiKey: openaiKey || '',
       modelPool: this.store.get('modelPool', [])
     }
   }
@@ -149,6 +185,15 @@ export class SettingsService {
     }
     if (partial.llm7ApiKey !== undefined) {
       this.setLLM7Key(partial.llm7ApiKey)
+    }
+    if (partial.pollinationsApiKey !== undefined) {
+      this.setPollinationsKey(partial.pollinationsApiKey)
+    }
+    if (partial.anthropicApiKey !== undefined) {
+      this.setAnthropicKey(partial.anthropicApiKey)
+    }
+    if (partial.openaiApiKey !== undefined) {
+      this.setOpenAIKey(partial.openaiApiKey)
     }
     if (partial.modelPool !== undefined) {
       this.store.set('modelPool', partial.modelPool)

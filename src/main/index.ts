@@ -34,7 +34,10 @@ const modelDiscoveryService = new ModelDiscoveryService(
   () => settingsService.getApiKey(),
   () => settingsService.getGroqKey(),
   () => settingsService.getGeminiKey(),
-  () => settingsService.getLLM7Key()
+  () => settingsService.getLLM7Key(),
+  () => settingsService.getPollinationsKey(),
+  () => settingsService.getAnthropicKey(),
+  () => settingsService.getOpenAIKey()
 )
 
 const orchestrator = new AgentOrchestrator(

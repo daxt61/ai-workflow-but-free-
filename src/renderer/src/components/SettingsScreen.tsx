@@ -14,6 +14,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
   const [groqKey, setGroqKey] = useState(settings?.groqApiKey ?? '')
   const [geminiKey, setGeminiKey] = useState(settings?.geminiApiKey ?? '')
   const [llm7Key, setLlm7Key] = useState(settings?.llm7ApiKey ?? '')
+  const [pollinationsKey, setPollinationsKey] = useState(settings?.pollinationsApiKey ?? '')
+  const [anthropicKey, setAnthropicKey] = useState(settings?.anthropicApiKey ?? '')
+  const [openaiKey, setOpenAIKey] = useState(settings?.openaiApiKey ?? '')
   const [modelPool, setModelPool] = useState<string[]>(settings?.modelPool ?? [])
   const [searxUrl, setSearxUrl] = useState(settings?.searxInstanceUrl ?? '')
   const [braveKey, setBraveKey] = useState(settings?.searchProviderKey ?? '')
@@ -57,6 +60,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
       groqApiKey: groqKey,
       geminiApiKey: geminiKey,
       llm7ApiKey: llm7Key,
+      pollinationsApiKey: pollinationsKey,
+      anthropicApiKey: anthropicKey,
+      openaiApiKey: openaiKey,
       modelPool,
       searxInstanceUrl: searxUrl,
       searchProviderKey: braveKey,
@@ -156,6 +162,36 @@ export function SettingsScreen({ onClose }: SettingsScreenProps): React.JSX.Elem
             value={llm7Key}
             onChange={(e) => setLlm7Key(e.target.value)}
             placeholder="llm7_..."
+          />
+        </label>
+
+        <label>
+          Pollinations API key <span className="optional">(optional)</span>
+          <input
+            type="password"
+            value={pollinationsKey}
+            onChange={(e) => setPollinationsKey(e.target.value)}
+            placeholder="pk_... or sk_..."
+          />
+        </label>
+
+        <label>
+          Anthropic API key
+          <input
+            type="password"
+            value={anthropicKey}
+            onChange={(e) => setAnthropicKey(e.target.value)}
+            placeholder="sk-ant-..."
+          />
+        </label>
+
+        <label>
+          OpenAI API key
+          <input
+            type="password"
+            value={openaiKey}
+            onChange={(e) => setOpenAIKey(e.target.value)}
+            placeholder="sk-..."
           />
         </label>
 

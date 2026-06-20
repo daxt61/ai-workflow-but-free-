@@ -4,6 +4,9 @@ import { OpenRouterClient } from '../services/OpenRouterClient'
 import { GroqClient } from '../services/GroqClient'
 import { GeminiClient } from '../services/GeminiClient'
 import { LLM7Client } from '../services/LLM7Client'
+import { PollinationsClient } from '../services/PollinationsClient'
+import { AnthropicClient } from '../services/AnthropicClient'
+import { OpenAIClient } from '../services/OpenAIClient'
 import { CancellationToken } from './CancellationToken'
 import { LogEntry } from '@shared/types'
 import * as fs from 'fs/promises'
@@ -31,6 +34,9 @@ export class AIManager {
     private getGroqKey: () => string | null,
     private getGeminiKey: () => string | null,
     private getLLM7Key: () => string | null,
+    private getPollinationsKey: () => string | null,
+    private getAnthropicKey: () => string | null,
+    private getOpenAIKey: () => string | null,
     private onLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void,
     private getWindow: () => BrowserWindow | null
   ) {}
@@ -116,6 +122,8 @@ export class AIManager {
       const groqKey = this.getGroqKey()
       const geminiKey = this.getGeminiKey()
       const llm7Key = this.getLLM7Key()
+      const anthropicKey = this.getAnthropicKey()
+      const openaiKey = this.getOpenAIKey()
 
       // Only use direct clients if API keys are provided AND it matches the specific provider
       if (geminiKey && (modelId.includes('gemini') || modelId.includes('gemma')) && !modelId.includes(':')) {
@@ -124,6 +132,12 @@ export class AIManager {
         client = new GroqClient(this.getGroqKey, modelId)
       } else if (llm7Key && modelId.startsWith('llm7:')) {
         client = new LLM7Client(this.getLLM7Key, modelId.replace('llm7:', ''))
+      } else if (modelId.startsWith('pollinations:')) {
+        client = new PollinationsClient(this.getPollinationsKey, modelId.replace('pollinations:', ''))
+      } else if (anthropicKey && modelId.startsWith('anthropic:')) {
+        client = new AnthropicClient(this.getAnthropicKey, modelId.replace('anthropic:', ''))
+      } else if (openaiKey && modelId.startsWith('openai:')) {
+        client = new OpenAIClient(this.getOpenAIKey, modelId.replace('openai:', ''))
       } else {
         client = new OpenRouterClient(this.getOpenRouterKey, modelId)
       }
