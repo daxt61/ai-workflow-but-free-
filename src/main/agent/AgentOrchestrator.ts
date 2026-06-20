@@ -53,6 +53,9 @@ export class AgentOrchestrator {
       () => this.settingsService.getGroqKey(),
       () => this.settingsService.getGeminiKey(),
       () => this.settingsService.getLLM7Key(),
+      () => this.settingsService.getPollinationsKey(),
+      () => this.settingsService.getAnthropicKey(),
+      () => this.settingsService.getOpenAIKey(),
       (entry) => this.log(entry),
       getWindow
     )

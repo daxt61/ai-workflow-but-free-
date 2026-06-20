@@ -1,5 +1,8 @@
 import { OpenRouterClient } from './OpenRouterClient'
 import { LLM7Client } from './LLM7Client'
+import { PollinationsClient } from './PollinationsClient'
+import { AnthropicClient } from './AnthropicClient'
+import { OpenAIClient } from './OpenAIClient'
 import type { OpenRouterModel } from '@shared/types'
 import { enrichOpenRouterModel } from '@shared/modelUtils'
 
@@ -8,7 +11,10 @@ export class ModelDiscoveryService {
     private getOpenRouterKey: () => string | null,
     private getGroqKey: () => string | null,
     private getGeminiKey: () => string | null,
-    private getLLM7Key: () => string | null
+    private getLLM7Key: () => string | null,
+    private getPollinationsKey: () => string | null,
+    private getAnthropicKey: () => string | null,
+    private getOpenAIKey: () => string | null
   ) {}
 
   async listAllModels(): Promise<OpenRouterModel[]> {
@@ -16,7 +22,10 @@ export class ModelDiscoveryService {
       this.fetchOpenRouterModels(),
       this.fetchGroqModels(),
       this.fetchGeminiModels(),
-      this.fetchLLM7Models()
+      this.fetchLLM7Models(),
+      this.fetchPollinationsModels(),
+      this.fetchAnthropicModels(),
+      this.fetchOpenAIModels()
     ])
 
     const allModels: OpenRouterModel[] = []
@@ -95,12 +104,68 @@ export class ModelDiscoveryService {
     try {
       const raw = await client.listModels()
       return raw.map(m => enrichOpenRouterModel({
-        id: m.id,
+        id: `llm7:${m.id}`,
         name: `LLM7: ${m.id}`,
         pricing: { prompt: '0', completion: '0' },
         context_length: m.context_window?.tokens ?? 4096,
         supported_parameters: m.tools_calling ? ['tools'] : []
       }))
+    } catch {
+      return []
+    }
+  }
+
+  private async fetchPollinationsModels(): Promise<OpenRouterModel[]> {
+    const client = new PollinationsClient(this.getPollinationsKey, '')
+    try {
+      const raw = await client.listModels()
+      return raw.map(m => enrichOpenRouterModel({
+        id: `pollinations:${m.id}`,
+        name: `Pollinations: ${m.id}`,
+        pricing: { prompt: '0', completion: '0' },
+        context_length: m.context_length ?? 4096,
+        supported_parameters: m.tools ? ['tools'] : []
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  private async fetchAnthropicModels(): Promise<OpenRouterModel[]> {
+    const key = this.getAnthropicKey()
+    if (!key) return []
+
+    const client = new AnthropicClient(this.getAnthropicKey, '')
+    try {
+      const raw = await client.listModels()
+      return raw.map(m => enrichOpenRouterModel({
+        id: `anthropic:${m.id}`,
+        name: `Anthropic: ${m.display_name || m.id}`,
+        pricing: { prompt: '0', completion: '0' },
+        context_length: 200000,
+        supported_parameters: ['tools']
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  private async fetchOpenAIModels(): Promise<OpenRouterModel[]> {
+    const key = this.getOpenAIKey()
+    if (!key) return []
+
+    const client = new OpenAIClient(this.getOpenAIKey, '')
+    try {
+      const raw = await client.listModels()
+      return raw
+        .filter(m => m.id.startsWith('gpt-') || m.id.startsWith('o1-') || m.id.startsWith('o3-'))
+        .map(m => enrichOpenRouterModel({
+          id: `openai:${m.id}`,
+          name: `OpenAI: ${m.id}`,
+          pricing: { prompt: '0', completion: '0' },
+          context_length: 128000,
+          supported_parameters: ['tools']
+        }))
     } catch {
       return []
     }
